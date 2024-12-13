@@ -1,11 +1,28 @@
----
 version: "3"
 
 services:
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.template.conf:/nginx.template.conf
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ${NGINX_SSL_PATH}:/etc/ssl:ro
+      - ./static:/usr/share/nginx/html
+      - ./generate-nginx-conf.sh:/generate-nginx-conf.sh:ro
+    depends_on:
+      - 3x-ui
+    entrypoint: ["/bin/bash", "-c", "bash ./generate-nginx-conf.sh && nginx -g 'daemon off;'"]
+    networks:
+      - vpn-network
+
   3x-ui:
     image: ghcr.io/mhsanaei/3x-ui:latest
     container_name: 3x-ui
-    hostname: yourhostname
+    hostname: ${NGINX_DOMAIN}
     volumes:
       - $PWD/db/:/etc/x-ui/
       - $PWD/cert/:/root/cert/
@@ -14,3 +31,7 @@ services:
     tty: true
     network_mode: host
     restart: unless-stopped
+
+networks:
+  vpn-network:
+    driver: bridge
